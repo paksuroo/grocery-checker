@@ -1,6 +1,6 @@
 {
-  "name": "SmartCart - Grocery Budget Tracker",
-  "short_name": "SmartCart",
+  "name": "Grocer-E - Grocery Budget Tracker",
+  "short_name": "Grocer-E",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
