@@ -759,7 +759,12 @@
                 if (typeof Html5QrcodeScanner === 'undefined') {
                     throw new Error('Scanner library failed to load');
                 }
-                html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 220 });
+                html5QrcodeScanner = new Html5QrcodeScanner("reader", {
+                    fps: 10,
+                    qrbox: 220,
+                    rememberLastUsedCamera: true,
+                    videoConstraints: { facingMode: { ideal: "environment" } }
+                });
                 html5QrcodeScanner.render(onScanSuccess);
             } catch (e) {
                 console.warn('Barcode scanner unavailable:', e);
