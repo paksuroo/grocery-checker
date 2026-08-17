@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartCart</title>
+    <meta name="theme-color" content="#6366f1">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <!-- Scanner Library -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        /* High-Contrast Light & Dark Themes */
+        :root {
+            --bg-app: #121214;         /* True Deep Charcoal */
+            --bg-surface: #1e1e24;     /* Dark Surface Card */
+            --bg-input: #121214;
+            --text-main: #ffffff;      /* Crisp White Text */
+            --text-muted: #a1a1aa;     /* Clean Gray Muted Text */
+            --accent: #6366f1;         /* Modern Indigo Accent */
+            --accent-hover: #4f46e5;
+            --accent-text: #ffffff;
+            --border: #2d2d34;
+            --success-light: rgba(34, 197, 94, 0.1);
+            --success-text: #22c55e;
+            --danger-light: rgba(239, 68, 68, 0.1);
+            --danger-text: #ef4444;
+            --shadow: 0 4px 20px rgba(0,0,0,0.4);
+            --radius: 16px;
+            --toggle-bg: #ffffff;
+            --toggle-text: #121214;
+        }
+
+        [data-theme="light"] {
+            --bg-app: #f4f4f9;         /* Clean Light Gray */
+            --bg-surface: #ffffff;     /* Pure White Card */
+            --bg-input: #f4f4f9;
+            --text-main: #18181b;      /* Dark Charcoal Text */
+            --text-muted: #71717a;
+            --accent: #4f46e5;
+            --accent-hover: #4338ca;
+            --border: #e4e4e7;
+            --success-light: #f0fdf4;
+            --success-text: #16a34a;
+            --danger-light: #fef2f2;
+            --danger-text: #dc2626;
+            --shadow: 0 4px 20px rgba(0,0,0,0.05);
+            --toggle-bg: #18181b;
+            --toggle-text: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+        }
+
+        body {
+            background-color: var(--bg-app);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        /* Phone Layout Frame */
+        .app-container {
+            width: 100%;
+            max-width: 440px;
+            background-color: var(--bg-surface);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: var(--shadow);
+            padding-bottom: 85px;
+        }
+
+        header {
+            padding: 24px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: var(--text-main);
+        }
+
+        .theme-toggle {
+            background-color: var(--toggle-bg);
+            color: var(--toggle-text);
+            border: none;
+            cursor: pointer;
+            padding: 8px 14px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+            gap: 6px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+
+        .view-section {
+            display: none;
+            padding: 20px;
+            animation: fadeIn 0.2s ease-in-out;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Spend Tracker Panel */
+        .budget-status-card {
+            background: var(--bg-surface);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+        }
+
+        .input-inline {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+        }
+
+        .input-inline label {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .input-inline input {
+            width: 120px;
+            text-align: right;
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-size: 1.2rem;
+            font-weight: 700;
+            outline: none;
+        }
+
+        .grid-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+            text-align: left;
+        }
+
+        .stat-group span {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .stat-number {
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 10px;
+            background-color: var(--bg-app);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background-color: var(--accent);
+            border-radius: 10px;
+            transition: width 0.3s ease-in-out, background-color 0.3s;
+        }
+
+        .status-alert-box {
+            margin-top: 14px;
+            padding: 10px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        /* General Forms & Action Buttons */
+        .form-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        input.clean-input {
+            width: 100%;
+            background-color: var(--bg-input);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            outline: none;
+            font-weight: 500;
+        }
+
+        .primary-btn {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            width: 100%;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .primary-btn:hover { background-color: var(--accent-hover); }
+
+        #reader {
+            border-radius: var(--radius);
+            overflow: hidden;
+            border: 1px solid var(--border) !important;
+            background: var(--bg-input);
+            margin-bottom: 24px;
+        }
+        #reader button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 700;
+        }
+
+        .section-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 26px;
+            margin-bottom: 12px;
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+        }
+
+        .text-btn {
+            background: none;
+            border: none;
+            color: var(--danger-text);
+            font-size: 0.85rem;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .item-list { list-style: none; }
+
+        .item-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 14px;
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--border);
+            border-left: 4px solid var(--border);
+            margin-bottom: 4px;
+            gap: 8px;
+        }
+
+        .category-select {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            border-radius: 6px;
+            font-size: 0.85rem;
+            padding: 4px;
+            max-width: 42px;
+            flex-shrink: 0;
+        }
+
+        .recurring-badge {
+            font-size: 0.75rem;
+            margin-left: 4px;
+        }
+
+        .category-group-header {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+            padding: 10px 4px 4px 4px;
+            text-transform: uppercase;
+        }
+
+        .item-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .editable-input {
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-size: 0.95rem;
+            font-weight: 600;
+            width: 100%;
+            outline: none;
+            padding: 4px;
+            border-radius: 4px;
+        }
+        .editable-input:focus {
+            background: var(--bg-input);
+            box-shadow: 0 0 0 1px var(--border);
+        }
+        .editable-price {
+            width: 70px;
+            text-align: right;
+            font-weight: 700;
+        }
+
+        /* Quantity Increments Box */
+        .quantity-control {
+            display: flex;
+            align-items: center;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 2px;
+            margin-right: 8px;
+        }
+
+        .qty-btn {
+            background: transparent;
+            border: none;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-main);
+            font-weight: bold;
+        }
+
+        .qty-number {
+            font-size: 0.85rem;
+            font-weight: 700;
+            padding: 0 6px;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        /* Custom Checkboxes layout */
+                .checkbox-custom {
+            width: 20px;
+            height: 20px;
+            border: 1px solid var(--text-muted);
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .checked .checkbox-custom {
+            background-color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .checked .item-text {
+            text-decoration: line-through;
+            color: var(--text-muted);
+            opacity: 0.6;
+        }
+
+        .action-icon-btn {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px;
+            font-size: 1.1rem;
+        }
+
+        /* Mobile Bottom Tab Bar */
+        .bottom-nav {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 75px;
+            background-color: var(--bg-surface);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--text-muted);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+            font-weight: 600;
+            gap: 4px;
+            flex: 1;
+        }
+
+        .nav-item.active {
+            color: var(--accent);
+        }
+        
+        .nav-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        /* Floating Interactive Undo Toast */
+        .toast-notification {
+            position: fixed;
+            bottom: -80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--accent);
+            color: white;
+            padding: 14px 24px;
+            border-radius: 30px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            box-shadow: var(--shadow);
+            z-index: 1000;
+            transition: bottom 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .toast-notification.show { bottom: 95px; }
+
+        /* History / Past Trips */
+        .trip-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+
+        .trip-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 16px;
+            cursor: pointer;
+        }
+
+        .trip-date {
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+
+        .trip-meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .trip-total {
+            font-weight: 700;
+            color: var(--accent);
+            font-size: 1.05rem;
+        }
+
+        .trip-items-detail {
+            border-top: 1px solid var(--border);
+            padding: 8px 16px;
+        }
+
+        .trip-item-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 0.85rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .trip-item-row:last-child { border-bottom: none; }
+
+        .empty-state {
+            padding: 40px 14px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .camera-warning-box {
+            padding: 16px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <header>
+            <h1>SmartCart</h1>
+            <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">☀️ Mode</button>
+        </header>
+
+        <!-- LIVE HUD OVERVIEW PANEL -->
+        <div style="padding: 20px 20px 0 20px;" id="globalStatus">
+            <div class="budget-status-card">
+                <div class="input-inline">
+                    <label>Budget Limit</label>
+                    <div>₱ <input type="number" id="budgetLimitInput" value="1000" oninput="updateBudgetLimit(this.value)"></div>
+                </div>
+                <div class="grid-stats">
+                    <div class="stat-group">
+                        <span>Cart Total</span>
+                        <div class="stat-number" id="cartTotalDisplay">₱0.00</div>
+                    </div>
+                    <div class="stat-group" style="text-align: right;">
+                        <span id="statusLabel">Remaining</span>
+                        <div class="stat-number" id="statusDiffDisplay">₱1,000.00</div>
+                    </div>
+                </div>
+                
+                <div class="progress-container">
+                    <div id="progressBar" class="progress-bar"></div>
+                </div>
+
+                <div id="statusAlertBox" class="status-alert-box" style="display:none;"></div>
+            </div>
+        </div>
+
+        <!-- VIEW 1: SHOPPING CART SCREEN -->
+        <div id="view-cart" class="view-section active">
+            <button class="primary-btn" id="scannerToggleBtn" onclick="toggleScanner()" style="background-color: var(--bg-input); color: var(--text-main); border: 1px solid var(--border); margin-bottom: 16px;">📷 Scan Barcode</button>
+            <div id="reader" style="display:none;"></div>
+            
+            <div class="form-row">
+                <input type="text" id="manualName" class="clean-input" list="recurringItemsList" placeholder="Product Name (e.g., Bread)" onkeypress="if(event.key==='Enter'){ document.getElementById('manualPrice').focus(); }">
+                <select id="manualCategory" class="clean-input" style="max-width:110px;"></select>
+            </div>
+            <datalist id="recurringItemsList"></datalist>
+            <div class="form-row">
+                <input type="number" id="manualPrice" step="0.01" class="clean-input" placeholder="Price (₱)" onkeypress="if(event.key==='Enter'){ addManualToCart(); }">
+            </div>
+            <button class="primary-btn" onclick="addManualToCart()">➕ Add to Cart</button>
+
+            <div class="section-title-row">
+                <div id="cartHeaderTitle" class="section-title" onclick="toggleCartCollapse()" style="cursor:pointer; display:flex; align-items:center; gap:6px; user-select:none;">
+                    ▼ My Cart Items (0)
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button class="text-btn" style="color: var(--accent);" onclick="endTrip()">End Trip 🏁</button>
+                    <button class="text-btn" onclick="clearCart()">Empty Cart</button>
+                </div>
+            </div>
+            <ul id="cartItemsList" class="item-list"></ul>
+        </div>
+
+        <!-- VIEW 2: TARGET CHECKLIST SCREEN -->
+        <div id="view-checklist" class="view-section">
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px; font-weight: 500;">
+                Plan your items here. Tap rows to cross off, or press the cart icon to push over into your running spend total. 🔁 marks items you buy often.
+            </p>
+            
+            <div class="form-row">
+                <input type="text" id="newChecklistItem" class="clean-input" list="recurringItemsList" placeholder="Add expected item (e.g., Eggs)" onkeypress="if(event.key==='Enter'){ addChecklistItem(); }">
+                <select id="newChecklistCategory" class="clean-input" style="max-width:110px;"></select>
+                <button class="primary-btn" style="width: 50px;" onclick="addChecklistItem()">➕</button>
+            </div>
+
+            <div class="section-title-row">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div class="section-title">My Target Checklist</div>
+                    <button class="text-btn" id="groupToggleBtn" style="color: var(--text-muted);" onclick="toggleChecklistGrouping()">Group: Off</button>
+                </div>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <span class="section-title" id="checklistEstTotal" style="color: var(--text-main);"></span>
+                    <button class="text-btn" style="color: var(--accent);" onclick="pushAllUncheckedToCart()">Push All 🛒</button>
+                </div>
+            </div>
+            <ul id="checklistUl" class="item-list"></ul>
+        </div>
+
+        <!-- VIEW 3: SHOPPING HISTORY SCREEN -->
+        <div id="view-history" class="view-section">
+            <div class="section-title-row" style="margin-top:0;">
+                <div class="section-title">Past Trips</div>
+                <button class="text-btn" onclick="clearHistory()">Clear History</button>
+            </div>
+            <div id="historyList"></div>
+        </div>
+
+        <!-- STICKY FOOTER CONTROLS NAV BAR -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" onclick="switchView('cart', this)">
+                🛒 <span class="nav-label">Cart</span>
+            </button>
+            <button class="nav-item" onclick="switchView('checklist', this)">
+                📋 <span class="nav-label">Checklist</span>
+            </button>
+            <button class="nav-item" onclick="switchView('history', this)">
+                📜 <span class="nav-label">History</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Alert Bubble Toast Banner Component -->
+    <div id="toast" class="toast-notification">Logged!</div>
+
+    <script>
+        // Safe localStorage read — corrupted/manually-edited data no longer crashes the whole app on boot
+        function safeParse(key, fallback) {
+            try {
+                const raw = localStorage.getItem(key);
+                if (raw === null) return fallback;
+                const parsed = JSON.parse(raw);
+                return parsed === null || parsed === undefined ? fallback : parsed;
+            } catch (e) {
+                console.warn(`Corrupted localStorage value for "${key}", resetting.`, e);
+                return fallback;
+            }
+        }
+
+        // Core App Memory Controllers
+        let budgetLimit = parseFloat(localStorage.getItem('budgetLimit')) || 1000;
+        let cart = safeParse('cart', []);
+        let checklist = safeParse('checklist', [
+            { id: 1, name: "Fresh Milk", checked: false, estPrice: 0, category: "Dairy" },
+            { id: 2, name: "Eggs", checked: false, estPrice: 0, category: "Dairy" }
+        ]);
+        let trips = safeParse('trips', []);
+        let currentTheme = localStorage.getItem('theme') || 'dark';
+        let isCartMinimized = safeParse('isCartMinimized', false);
+        let groupByCategory = safeParse('groupByCategory', false);
+        let expandedTrips = new Set();
+
+        // Categories
+        const CATEGORIES = [
+            { name: "Produce", icon: "🥦", color: "#22c55e" },
+            { name: "Dairy", icon: "🥛", color: "#3b82f6" },
+            { name: "Meat & Seafood", icon: "🍗", color: "#ef4444" },
+            { name: "Bakery", icon: "🍞", color: "#f59e0b" },
+            { name: "Pantry", icon: "🥫", color: "#a855f7" },
+            { name: "Frozen", icon: "🧊", color: "#06b6d4" },
+            { name: "Beverages", icon: "🥤", color: "#ec4899" },
+            { name: "Household", icon: "🧴", color: "#84cc16" },
+            { name: "Personal Care", icon: "🧼", color: "#f472b6" },
+            { name: "Other", icon: "📦", color: "#71717a" }
+        ];
+        function categoryInfo(name) {
+            return CATEGORIES.find(c => c.name === name) || CATEGORIES[CATEGORIES.length - 1];
+        }
+        function populateCategorySelect(selectEl, selected) {
+            selectEl.innerHTML = CATEGORIES.map(c => `<option value="${c.name}" ${c.name === selected ? 'selected' : ''}>${c.icon} ${c.name}</option>`).join('');
+        }
+
+        // Global Tracking Containers for Undo State Functions
+        let lastDeletedItem = null; 
+        let lastDeleteSource = ''; 
+        let toastTimeout = null;
+
+        // Apply theme rules instantly on layout boot
+        document.documentElement.setAttribute('data-theme', currentTheme);
+        document.getElementById('budgetLimitInput').value = budgetLimit;
+        populateCategorySelect(document.getElementById('manualCategory'), 'Other');
+        populateCategorySelect(document.getElementById('newChecklistCategory'), 'Other');
+
+        const barcodeDb = {
+            "9300601351234": { name: "Full Cream Milk", price: 180.00 },
+            "9310072001234": { name: "White Bread", price: 85.00 }
+        };
+
+        updateThemeIcon();
+
+        // Scanner is now opt-in (see toggleScanner) and defensively guarded so that a missing
+        // library or denied camera permission can never again block the rest of the app from booting.
+        let scannerActive = false;
+        let html5QrcodeScanner = null;
+
+        function toggleScanner() {
+            const readerEl = document.getElementById('reader');
+            const btn = document.getElementById('scannerToggleBtn');
+
+            if (scannerActive) {
+                try { html5QrcodeScanner && html5QrcodeScanner.clear(); } catch (e) { /* no-op */ }
+                readerEl.style.display = 'none';
+                readerEl.innerHTML = '';
+                scannerActive = false;
+                btn.innerText = '📷 Scan Barcode';
+                return;
+            }
+
+            readerEl.style.display = 'block';
+            scannerActive = true;
+
+            // Camera access requires a secure context (https:// or localhost). Opening this file
+            // directly (file://) or over plain http:// makes the browser block the camera entirely —
+            // that's what causes "NotAllowedError: Permission denied" even after tapping allow.
+            if (!window.isSecureContext) {
+                btn.innerText = '📷 Scan Barcode';
+                readerEl.innerHTML = `<div class="camera-warning-box">
+                    ⚠️ <strong>Camera scanning needs HTTPS.</strong><br><br>
+                    This page is currently open as a local file, so your browser blocks camera access
+                    for privacy/security reasons — that's the "Permission denied" error you're seeing.<br><br>
+                    Host these files online (e.g. GitHub Pages, Netlify Drop, Vercel — all free) and open
+                    the <strong>https://</strong> link instead. Once hosted, scanning — and installing
+                    SmartCart as an app — will both work.<br><br>
+                    You can still add items manually below. 👇
+                </div>`;
+                return;
+            }
+
+            btn.innerText = '✖️ Close Scanner';
+
+            try {
+                if (typeof Html5QrcodeScanner === 'undefined') {
+                    throw new Error('Scanner library failed to load');
+                }
+                html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 220 });
+                html5QrcodeScanner.render(onScanSuccess);
+            } catch (e) {
+                console.warn('Barcode scanner unavailable:', e);
+                readerEl.innerHTML = `<div class="camera-warning-box">
+                    Camera scanner isn't available right now (no camera access or the library didn't load).
+                    You can still add items manually below. 👇
+                </div>`;
+            }
+        }
+
+        function showNotification(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.classList.add('show');
+            if(toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => { toast.classList.remove('show'); }, 2000);
+        }
+
+        function onScanSuccess(decodedText) {
+            if (barcodeDb[decodedText]) {
+                const item = barcodeDb[decodedText];
+                addToCartData(item.name, item.price);
+                showNotification(`Added ${item.name} 🛒`);
+            } else {
+                let price = prompt(`Scanned Unknown Barcode.\nEnter Item Price (₱):`);
+                if (price && !isNaN(price) && parseFloat(price) > 0) {
+                    let customPrice = parseFloat(price);
+                    let customName = prompt("Enter a description for this item:\n(e.g., Pork Belly, Chicken Wings)");
+                    if (!customName || customName.trim() === "") {
+                        customName = `Scanned Item (${decodedText.slice(-4)})`;
+                    }
+                    addToCartData(customName.trim(), customPrice);
+                    showNotification(`Added ${customName.trim()}`);
+                }
+            }
+        }
+
+        function toggleTheme() {
+            currentTheme = (currentTheme === 'dark') ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            localStorage.setItem('theme', currentTheme);
+            updateThemeIcon();
+        }
+
+        function updateThemeIcon() {
+            const btn = document.getElementById('themeBtn');
+            btn.innerText = currentTheme === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode';
+        }
+
+        function switchView(viewName, buttonEl) {
+            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+            document.getElementById(`view-${viewName}`).classList.add('active');
+            buttonEl.classList.add('active');
+            document.getElementById('globalStatus').style.display = (viewName === 'cart') ? 'block' : 'none';
+            if (viewName === 'history') renderHistory();
+        }
+
+                function updateBudgetLimit(val) {
+            budgetLimit = parseFloat(val) || 0;
+            localStorage.setItem('budgetLimit', budgetLimit);
+            calculateBudget();
+            syncToCloud();
+        }
+
+        function calculateBudget() {
+            let totalCart = cart.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+            let remaining = budgetLimit - totalCart;
+
+            document.getElementById('cartTotalDisplay').innerText = `₱${formatCurrency(totalCart)}`;
+            const label = document.getElementById('statusLabel');
+            const diffDisplay = document.getElementById('statusDiffDisplay');
+            const alertBox = document.getElementById('statusAlertBox');
+            const bar = document.getElementById('progressBar');
+
+            let percentage = budgetLimit > 0 ? (totalCart / budgetLimit) * 100 : 0;
+            bar.style.width = `${Math.min(percentage, 100)}%`;
+
+            if (percentage >= 100) {
+                bar.style.backgroundColor = "var(--danger-text)";
+            } else if (percentage >= 80) {
+                bar.style.backgroundColor = "#fbbf24";
+            } else {
+                bar.style.backgroundColor = "var(--accent)";
+            }
+
+            if (remaining >= 0) {
+                label.innerText = "Remaining";
+                label.style.color = "var(--text-muted)";
+                diffDisplay.innerText = `₱${formatCurrency(remaining)}`;
+                diffDisplay.style.color = "var(--text-main)";
+                
+                alertBox.style.display = totalCart > 0 ? "block" : "none";
+                alertBox.style.backgroundColor = "var(--success-light)";
+                alertBox.style.color = "var(--success-text)";
+                alertBox.innerText = `On Track! You are saving ₱${formatCurrency(remaining)}`;
+            } else {
+                label.innerText = "Over Budget";
+                label.style.color = "var(--danger-text)";
+                diffDisplay.innerText = `₱${formatCurrency(Math.abs(remaining))}`;
+                diffDisplay.style.color = "var(--danger-text)";
+                
+                alertBox.style.display = "block";
+                alertBox.style.backgroundColor = "var(--danger-light)";
+                alertBox.style.color = "var(--danger-text)";
+                alertBox.innerText = `Warning: Over budget by ₱${formatCurrency(Math.abs(remaining))}`;
+            }
+        }
+
+        function addManualToCart() {
+            const nameEl = document.getElementById('manualName');
+            const priceEl = document.getElementById('manualPrice');
+            const categoryEl = document.getElementById('manualCategory');
+            const name = nameEl.value.trim() || "Unassigned Item";
+            const price = parseFloat(priceEl.value);
+
+            if (isNaN(price) || price < 0) return;
+
+            addToCartData(name, price, 1, categoryEl.value);
+            showNotification(`Added ${name}`);
+            nameEl.value = '';
+            priceEl.value = '';
+        }
+
+        function addToCartData(name, price, quantity = 1, category = 'Other') {
+            cart.push({ id: Date.now(), name, price, quantity, category });
+            localStorage.setItem('cart', JSON.stringify(cart));
+            calculateBudget();
+            renderCartList();
+            syncToCloud();
+        }
+
+        function updateCartItemProperty(id, property, val) {
+            let item = cart.find(i => i.id === id);
+            if (item) {
+                if (property === 'price') {
+                    item.price = parseFloat(val) || 0;
+                } else if (property === 'category') {
+                    item.category = val;
+                } else {
+                    item.name = val.trim() || "Unassigned Item";
+                }
+                localStorage.setItem('cart', JSON.stringify(cart));
+                calculateBudget();
+                renderCartList();
+                syncToCloud();
+            }
+        }
+
+        function changeQuantity(id, delta) {
+            let item = cart.find(i => i.id === id);
+            if (item) {
+                item.quantity = (item.quantity || 1) + delta;
+                if (item.quantity <= 0) {
+                    removeCartItem(id);
+                    return;
+                }
+                localStorage.setItem('cart', JSON.stringify(cart));
+                calculateBudget();
+                renderCartList();
+                syncToCloud();
+            }
+        }
+
+        function removeCartItem(id) {
+            const itemIndex = cart.findIndex(item => item.id === id);
+            if (itemIndex !== -1) {
+                lastDeletedItem = { index: itemIndex, data: cart[itemIndex] };
+                lastDeleteSource = 'cart';
+                
+                cart = cart.filter(item => item.id !== id);
+                localStorage.setItem('cart', JSON.stringify(cart));
+                calculateBudget();
+                renderCartList();
+                syncToCloud();
+                
+                showUndoNotification(`Removed "${lastDeletedItem.data.name}"`);
+            }
+        }
+
+        function clearCart() {
+            if(confirm("Are you sure you want to empty your current cart?")) {
+                cart = [];
+                localStorage.setItem('cart', JSON.stringify(cart));
+                calculateBudget();
+                renderCartList();
+                syncToCloud();
+            }
+        }
+
+        function endTrip() {
+            if (cart.length === 0) {
+                showNotification("Cart is empty — nothing to save.");
+                return;
+            }
+            if (!confirm(`End this shopping trip and save ${cart.length} item(s) to history?`)) return;
+
+            const total = cart.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+            const trip = {
+                id: Date.now(),
+                date: new Date().toISOString(),
+                items: JSON.parse(JSON.stringify(cart)),
+                total,
+                budgetLimit
+            };
+            trips.unshift(trip);
+            localStorage.setItem('trips', JSON.stringify(trips));
+
+            cart = [];
+            localStorage.setItem('cart', JSON.stringify(cart));
+            calculateBudget();
+            renderCartList();
+            syncToCloud();
+
+            showNotification(`Trip saved! Total: ₱${formatCurrency(total)} 🏁`);
+        }
+
+        function toggleCartCollapse() {
+            isCartMinimized = !isCartMinimized;
+            localStorage.setItem('isCartMinimized', JSON.stringify(isCartMinimized));
+            renderCartList();
+        }
+
+        function formatCurrency(num) {
+            return (num || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function renderCartList() {
+            const ul = document.getElementById('cartItemsList');
+            ul.innerHTML = '';
+
+            if (cart.length === 0) {
+                ul.innerHTML = `<li style="padding: 32px 14px; text-align:center; color:var(--text-muted); font-size:0.9rem;">
+                    🛒 Your cart is empty.<br>Scan a barcode or add an item manually above.
+                </li>`;
+            }
+
+            cart.forEach(item => {
+                const cat = categoryInfo(item.category || 'Other');
+                const li = document.createElement('li');
+                li.className = 'item-row';
+                li.style.borderLeftColor = cat.color;
+                li.innerHTML = `
+                    <div class="item-left">
+                        <select class="category-select" onchange="updateCartItemProperty(${item.id}, 'category', this.value)" title="Category">
+                            ${CATEGORIES.map(c => `<option value="${c.name}" ${c.name === item.category ? 'selected' : ''}>${c.icon}</option>`).join('')}
+                        </select>
+                        <input type="text" class="editable-input" value="${item.name}" onchange="updateCartItemProperty(${item.id}, 'name', this.value)">
+                    </div>
+                    <div style="display:flex; align-items:center;">
+                        <div class="quantity-control">
+                            <button class="qty-btn" onclick="changeQuantity(${item.id}, -1)">-</button>
+                            <span class="qty-number">${item.quantity || 1}</span>
+                            <button class="qty-btn" onclick="changeQuantity(${item.id}, 1)">+</button>
+                        </div>
+                        <span style="font-weight:700; color:var(--text-muted); font-size:0.9rem; margin-right:4px;">₱</span>
+                        <input type="number" step="0.01" class="editable-input editable-price" value="${item.price.toFixed(2)}" onchange="updateCartItemProperty(${item.id}, 'price', this.value)">
+                        <button class="action-icon-btn" onclick="removeCartItem(${item.id})" style="margin-left:12px; background:transparent; border:none;" title="Remove Product" aria-label="Remove ${item.name}">🗑️</button>
+                    </div>
+                `;
+                ul.appendChild(li);
+            });
+            
+            const titleRow = document.getElementById('cartHeaderTitle');
+            titleRow.innerHTML = `${isCartMinimized ? '►' : '▼'} My Cart Items (${cart.length})`;
+            ul.style.display = isCartMinimized ? 'none' : 'block';
+        }
+
+        // Target Checklist View Layout modifiers
+        function addChecklistItem() {
+            const input = document.getElementById('newChecklistItem');
+            const categoryEl = document.getElementById('newChecklistCategory');
+            const name = input.value.trim();
+            if(!name) return;
+
+            checklist.push({ id: Date.now(), name: name, checked: false, estPrice: 0, category: categoryEl.value });
+            localStorage.setItem('checklist', JSON.stringify(checklist));
+            input.value = '';
+            renderChecklist();
+            syncToCloud();
+            input.focus();
+        }
+
+        function toggleChecklistGrouping() {
+            groupByCategory = !groupByCategory;
+            localStorage.setItem('groupByCategory', JSON.stringify(groupByCategory));
+            document.getElementById('groupToggleBtn').innerText = groupByCategory ? 'Group: On' : 'Group: Off';
+            renderChecklist();
+        }
+
+        // Counts how many past trips contained a given item name — used to flag recurring items.
+        function purchaseFrequency(name) {
+            const key = name.trim().toLowerCase();
+            if (!key) return 0;
+            let count = 0;
+            trips.forEach(trip => {
+                if (trip.items.some(i => i.name.trim().toLowerCase() === key)) count++;
+            });
+            return count;
+        }
+
+        function refreshRecurringDatalist() {
+            const nameFreq = {};
+            trips.forEach(trip => trip.items.forEach(i => {
+                const key = i.name.trim();
+                if (!key) return;
+                nameFreq[key] = (nameFreq[key] || 0) + 1;
+            }));
+            const frequent = Object.keys(nameFreq).filter(n => nameFreq[n] >= 2).sort((a,b) => nameFreq[b]-nameFreq[a]);
+            const datalist = document.getElementById('recurringItemsList');
+            if (datalist) datalist.innerHTML = frequent.map(n => `<option value="${n}"></option>`).join('');
+        }
+
+        function updateChecklistItemProperty(id, property, val) {
+            let item = checklist.find(i => i.id === id);
+            if (item) {
+                if (property === 'estPrice') {
+                    item.estPrice = parseFloat(val) || 0;
+                } else if (property === 'category') {
+                    item.category = val;
+                } else {
+                    item.name = val.trim() || "Unnamed Item";
+                }
+                localStorage.setItem('checklist', JSON.stringify(checklist));
+                renderChecklist();
+                syncToCloud();
+            }
+        }
+
+        function pushChecklistItemToCart(id, event) {
+            event.stopPropagation(); 
+            let item = checklist.find(i => i.id === id);
+            if(item) {
+                addToCartData(item.name, item.estPrice || 0, 1, item.category || 'Other');
+                item.checked = true;
+                localStorage.setItem('checklist', JSON.stringify(checklist));
+                renderChecklist();
+                showNotification(`Pushed ${item.name} to Cart! 🛒`);
+                syncToCloud();
+            }
+        }
+
+        function pushAllUncheckedToCart() {
+            const unchecked = checklist.filter(i => !i.checked);
+            if (unchecked.length === 0) return;
+            if (!confirm(`Push ${unchecked.length} item(s) to your cart?`)) return;
+            unchecked.forEach(item => {
+                cart.push({ id: Date.now() + Math.random(), name: item.name, price: item.estPrice || 0, quantity: 1, category: item.category || 'Other' });
+                item.checked = true;
+            });
+            localStorage.setItem('cart', JSON.stringify(cart));
+            localStorage.setItem('checklist', JSON.stringify(checklist));
+            calculateBudget();
+            renderCartList();
+            renderChecklist();
+            syncToCloud();
+            showNotification(`Pushed ${unchecked.length} item(s) to Cart! 🛒`);
+        }
+
+        function toggleChecklistRow(id) {
+            let item = checklist.find(i => i.id === id);
+            if(item) item.checked = !item.checked;
+            localStorage.setItem('checklist', JSON.stringify(checklist));
+            renderChecklist();
+            syncToCloud();
+        }
+
+        function removeChecklistItem(id, event) {
+            event.stopPropagation(); 
+            const itemIndex = checklist.findIndex(item => item.id === id);
+            if (itemIndex !== -1) {
+                lastDeletedItem = { index: itemIndex, data: checklist[itemIndex] };
+                lastDeleteSource = 'checklist';
+                
+                checklist = checklist.filter(item => item.id !== id);
+                localStorage.setItem('checklist', JSON.stringify(checklist));
+                renderChecklist();
+                syncToCloud();
+                
+                showUndoNotification(`Deleted "${lastDeletedItem.data.name}"`);
+            }
+        }
+
+        function showUndoNotification(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerHTML = `${msg} <span onclick="triggerUniversalUndo(event)" style="text-decoration:underline; margin-left:12px; cursor:pointer; font-weight:700; color:white;">[Undo]</span>`;
+            toast.classList.add('show');
+            if(toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => { toast.classList.remove('show'); }, 4000);
+        }
+
+                function triggerUniversalUndo(event) {
+            event.stopPropagation();
+            if (!lastDeletedItem) return;
+
+            if (lastDeleteSource === 'cart') {
+                cart.splice(lastDeletedItem.index, 0, lastDeletedItem.data);
+                localStorage.setItem('cart', JSON.stringify(cart));
+                calculateBudget();
+                renderCartList();
+            } else if (lastDeleteSource === 'checklist') {
+                checklist.splice(lastDeletedItem.index, 0, lastDeletedItem.data);
+                localStorage.setItem('checklist', JSON.stringify(checklist));
+                renderChecklist();
+            }
+            
+            lastDeletedItem = null;
+            lastDeleteSource = '';
+            document.getElementById('toast').classList.remove('show');
+            syncToCloud();
+        }
+
+        function renderChecklist() {
+            const ul = document.getElementById('checklistUl');
+            if(!ul) return; 
+            ul.innerHTML = '';
+
+            if (checklist.length === 0) {
+                ul.innerHTML = `<li style="padding: 32px 14px; text-align:center; color:var(--text-muted); font-size:0.9rem;">
+                    📋 Your checklist is empty.<br>Add items above to start planning your trip.
+                </li>`;
+                document.getElementById('checklistEstTotal').innerText = '';
+                return;
+            }
+
+            function renderChecklistRow(item) {
+                const cat = categoryInfo(item.category || 'Other');
+                const freq = purchaseFrequency(item.name);
+                const li = document.createElement('li');
+                li.className = `item-row ${item.checked ? 'checked' : ''}`;
+                li.style.borderLeftColor = cat.color;
+                li.innerHTML = `
+                    <div class="item-left" style="cursor:pointer;" onclick="toggleChecklistRow(${item.id})">
+                        <div class="checkbox-custom" style="font-size:12px; font-weight:bold; color:var(--accent); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                            ${item.checked ? '✓' : ''}
+                        </div>
+                        <select class="category-select" onclick="event.stopPropagation()" onchange="updateChecklistItemProperty(${item.id}, 'category', this.value)" title="Category">
+                            ${CATEGORIES.map(c => `<option value="${c.name}" ${c.name === item.category ? 'selected' : ''}>${c.icon}</option>`).join('')}
+                        </select>
+                        <input type="text" class="editable-input item-text" value="${item.name}" onclick="event.stopPropagation()" onchange="updateChecklistItemProperty(${item.id}, 'name', this.value)">
+                        ${freq >= 2 ? `<span class="recurring-badge" title="Bought in ${freq} past trips">🔁</span>` : ''}
+                    </div>
+                    <div style="display:flex; align-items:center; gap:2px;">
+                        <span style="font-weight:700; color:var(--text-muted); font-size:0.85rem;">₱</span>
+                        <input type="number" step="0.01" class="editable-input editable-price" value="${(item.estPrice || 0).toFixed(2)}" onclick="event.stopPropagation()" onchange="updateChecklistItemProperty(${item.id}, 'estPrice', this.value)" title="Estimated price">
+                        <button class="action-icon-btn" onclick="pushChecklistItemToCart(${item.id}, event)" title="Send to Cart" aria-label="Send ${item.name} to cart" style="opacity: ${item.checked ? 0.3 : 1};">🛒</button>
+                        <button class="action-icon-btn" onclick="removeChecklistItem(${item.id}, event)" title="Delete Item" aria-label="Delete ${item.name}">❌</button>
+                    </div>
+                `;
+                return li;
+            }
+
+            if (groupByCategory) {
+                CATEGORIES.forEach(cat => {
+                    const items = checklist.filter(i => (i.category || 'Other') === cat.name);
+                    if (items.length === 0) return;
+                    const header = document.createElement('li');
+                    header.className = 'category-group-header';
+                    header.innerText = `${cat.icon} ${cat.name} (${items.length})`;
+                    ul.appendChild(header);
+                    items.forEach(item => ul.appendChild(renderChecklistRow(item)));
+                });
+            } else {
+                checklist.forEach(item => ul.appendChild(renderChecklistRow(item)));
+            }
+
+            const estTotal = checklist.filter(i => !i.checked).reduce((sum, i) => sum + (i.estPrice || 0), 0);
+            document.getElementById('checklistEstTotal').innerText = estTotal > 0 ? `Est. ₱${formatCurrency(estTotal)}` : '';
+        }
+
+        // ==========================================
+        //  SHOPPING HISTORY / PAST TRIPS
+        // ==========================================
+        function toggleTripExpand(id) {
+            if (expandedTrips.has(id)) expandedTrips.delete(id);
+            else expandedTrips.add(id);
+            renderHistory();
+        }
+
+        function deleteTrip(id, event) {
+            event.stopPropagation();
+            if (!confirm("Delete this trip from your history?")) return;
+            trips = trips.filter(t => t.id !== id);
+            localStorage.setItem('trips', JSON.stringify(trips));
+            renderHistory();
+            refreshRecurringDatalist();
+            syncToCloud();
+        }
+
+        function clearHistory() {
+            if (trips.length === 0) return;
+            if (!confirm("Clear all shopping history? This can't be undone.")) return;
+            trips = [];
+            localStorage.setItem('trips', JSON.stringify(trips));
+            renderHistory();
+            refreshRecurringDatalist();
+            syncToCloud();
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('historyList');
+            if (!container) return;
+
+            if (trips.length === 0) {
+                container.innerHTML = `<div class="empty-state">📜 No past trips yet.<br>Tap "End Trip 🏁" on the Cart tab after shopping to save it here.</div>`;
+                return;
+            }
+
+            container.innerHTML = trips.map(trip => {
+                const d = new Date(trip.date);
+                const dateLabel = d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+                const timeLabel = d.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' });
+                const expanded = expandedTrips.has(trip.id);
+                const itemsHtml = trip.items.map(i => {
+                    const cat = categoryInfo(i.category || 'Other');
+                    return `<div class="trip-item-row">
+                        <span>${cat.icon} ${i.name} ${(i.quantity || 1) > 1 ? `× ${i.quantity}` : ''}</span>
+                        <span>₱${formatCurrency(i.price * (i.quantity || 1))}</span>
+                    </div>`;
+                }).join('');
+
+                return `
+                    <div class="trip-card">
+                        <div class="trip-card-header" onclick="toggleTripExpand(${trip.id})">
+                            <div>
+                                <div class="trip-date">${dateLabel}</div>
+                                <div class="trip-meta">${timeLabel} · ${trip.items.length} item${trip.items.length !== 1 ? 's' : ''}</div>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <div class="trip-total">₱${formatCurrency(trip.total)}</div>
+                                <button class="action-icon-btn" onclick="deleteTrip(${trip.id}, event)" title="Delete trip" aria-label="Delete trip from ${dateLabel}">🗑️</button>
+                                <span style="color:var(--text-muted);">${expanded ? '▲' : '▼'}</span>
+                            </div>
+                        </div>
+                        ${expanded ? `<div class="trip-items-detail">${itemsHtml}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ==========================================
+        //  OPTIONAL INTERNET LIVE CLOUD SYNC SECTION 
+        // ==========================================
+        const enableCloudSync = false; 
+        const firebaseDbUrl = "YOUR_FREE_FIREBASE_URL_://firebaseio.com"; 
+
+        function syncToCloud() {
+            if(!enableCloudSync || firebaseDbUrl.includes("YOUR_FREE_FIREBASE_URL")) return;
+            const packageData = { budgetLimit, cart, checklist, trips };
+            fetch(`https://${firebaseDbUrl}/smartcart_share.json`, {
+                method: 'PUT',
+                body: JSON.stringify(packageData)
+            });
+        }
+
+        function listenToCloudSync() {
+            if(!enableCloudSync || firebaseDbUrl.includes("YOUR_FREE_FIREBASE_URL")) return;
+            setInterval(() => {
+                fetch(`https://${firebaseDbUrl}/smartcart_share.json`)
+                .then(res => res.json())
+                .then(data => {
+                    if(data) {
+                        budgetLimit = data.budgetLimit || 1000;
+                        cart = data.cart || [];
+                        checklist = data.checklist || [];
+                        trips = data.trips || [];
+                        
+                        localStorage.setItem('budgetLimit', budgetLimit);
+                        localStorage.setItem('cart', JSON.stringify(cart));
+                        localStorage.setItem('checklist', JSON.stringify(checklist));
+                        localStorage.setItem('trips', JSON.stringify(trips));
+                        
+                        document.getElementById('budgetLimitInput').value = budgetLimit;
+                        calculateBudget();
+                        renderCartList();
+                        renderChecklist();
+                        refreshRecurringDatalist();
+                    }
+                });
+            }, 3000);
+        }
+
+        // Register service worker for offline support (requires a secure context — see toggleScanner note above)
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator && window.isSecureContext) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('./sw.js').catch(e => console.warn('Service worker registration failed:', e));
+                });
+            }
+        }
+
+        // Bootstrapping App Lifecycle Execution (Guaranteed ordering)
+        // Each step is wrapped independently so a failure in one (e.g. cloud sync)
+        // can never again prevent the rest of the UI from rendering on load/refresh.
+        document.getElementById('groupToggleBtn').innerText = groupByCategory ? 'Group: On' : 'Group: Off';
+        [calculateBudget, renderCartList, renderChecklist, refreshRecurringDatalist, listenToCloudSync, registerServiceWorker].forEach(fn => {
+            try { fn(); } catch (e) { console.error(`Boot step "${fn.name}" failed:`, e); }
+        });
+    </script>
+</body>
+</html>
+
+
+
