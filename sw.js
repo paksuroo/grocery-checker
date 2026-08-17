@@ -1,6 +1,6 @@
 // SmartCart Service Worker — caches the app shell so it works fully offline.
 // Bump CACHE_NAME when you deploy a new version to force a refresh.
-const CACHE_NAME = 'smartcart-v1';
+const CACHE_NAME = 'smartcart-v2';
 const ASSETS = [
   './index.html',
   './manifest.json',
