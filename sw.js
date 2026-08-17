@@ -2,7 +2,7 @@
 // Bump CACHE_NAME when you deploy a new version to force a refresh.
 const CACHE_NAME = 'smartcart-v1';
 const ASSETS = [
-  './grocerychecker.html',
+  './index.html',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'

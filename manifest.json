@@ -1,7 +1,7 @@
 {
   "name": "SmartCart - Grocery Budget Tracker",
   "short_name": "SmartCart",
-  "start_url": "./grocerychecker.html",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
